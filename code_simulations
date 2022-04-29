@@ -1,0 +1,1326 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+g = 0.00414  # corresponde a t = 1 ns  
+gamma = 100*g
+Gamma = 0.05*g
+h = 1
+gamma1 = 1*g
+gamma2 = 1*g  
+p = 0*np.sqrt(gamma1*gamma2) # interferencia fano
+
+
+# Ordem rho[11] rho[13] rho[22] rho[24] rho[31] rho[33] rho[42] rho[44] rho[cc] rho[vv]
+
+
+def M(GAMMA):
+    Matriz = np.array([[1,0,1,0,0,1,0,1,1,1], [1j*Te/h,-gamma1*(n1+1)/2-gamma2*(n2+1)/2-gamma*(nc \
+    +1)/2-1j*omega12,0,p*(n1+n2)/2,0,-1j*Te/h,0,0,0,0], [gamma1*(n1+1),0,-Gamma*nv-gamma1*n1,1j*Th/h, \
+    0,0,-1j*Th/h,0,0,Gamma*(nv+1)], [0,p*(n1+n2+2)/2,1j*Th/h,-gamma1*(n1)/2-gamma2*(n2)/2-Gamma*(nv)/2 \
+    -1j*omega34,0,0,0,-1j*Th/h,0,0], [-1j*Te/h,0,0,0,-gamma1*(n1+1)/2-gamma2*(n2+1)/2-gamma*(nc+1)/2+1j*omega21,1j*Te/h, \
+    p*(n1+n2)/2,0,0,0], [0,-1j*Te/h,0,0,1j*Te/h,-gamma2*(n2+1)-gamma*(nc+1),0,gamma2*n2,gamma*nc,0], [0,0, \
+    -1j*Th/h,0,p*(n1+n2+2)/2,0,-gamma1*(n1)/2-gamma2*(n2)/2-Gamma*(nv)/2+1j*omega43,1j*Th/h,0,0], [0,0, \
+    0,-1j*Th/h,0,gamma2*(n2+1),1j*Th/h,-n2*gamma2,0,0], [0,0,0,0,0,gamma*(nc+1),0,0,-gamma*nc-GAMMA,0], \
+    [0,0,Gamma*nv,0,0,0,0,0,GAMMA,-Gamma*(nv+1)]])
+    return(Matriz)
+
+B = np.array([1,0,0,0,0,0,0,0,0,0])
+
+npoints = 79
+gammaoi = 0.01
+gammaof = 1*10**(6)
+x = np.arange(1, npoints, 1)
+y = (gammaoi*gammaof*(npoints-1))/((gammaof-gammaoi)*(x-1)+gammaoi*(npoints-1))
+
+##################### MAXIMUM POWER  X  DELTA  X  TUNNELING ###################
+
+dlist = np.arange(2, 10.2, 0.05)
+xlist = np.arange(-6, 6, 0.05)
+
+
+tunelamento = np.array([])
+deslocamento = np.array([])
+pmaximo = np.array([])
+eficiencia = np.array([])
+for d in dlist:
+    Te = 0.5*(11.672*np.exp(-d/7.14))  
+    Th = 0.5*(2.202*np.exp(-d/3.37))  
+    for x in xlist:
+        omega12 = 3 + x # meV
+        omega21 = 3 + x # meV
+        omega34 = 3 - x  # meV
+        omega43 = 3 - x  # meV
+        omega63 = 2  # meV
+        omega25 = 2  # meV
+
+        e = 1
+        E13 = 1115  # meV
+        E24 = E13 - omega12 - omega34  # meV
+        E2c = omega25  # meV
+        E3v = omega63  # meV
+        Ecv = E13 - omega12 - omega25 - omega63  # meV
+        k = 1
+
+        Ts = 500  # meV
+        Ta = 25.9  # meV
+
+        n2 = 1/(np.exp(E24/(k*Ts)) - 1)
+        n1 = 1/(np.exp(E13/(k*Ts)) - 1)
+        nc = 1/(np.exp(E2c/(k*Ta)) - 1)
+        nv = 1/(np.exp(E3v/(k*Ta)) - 1)
+
+        VA1 = np.array([])
+        JA1 = np.array([])
+        PA1 = np.array([])
+        PsA1 = np.array([])
+        etaA1 = np.array([])
+        idx = 1
+        for GAMMA in y:
+            solve = np.linalg.solve(M(GAMMA), B)
+            corrente = e * GAMMA * solve[8]
+            v = (Ecv + k * Ta * np.log(solve[8] / solve[9])) / (e / g)
+            p = corrente * v
+            Pss = E13 * corrente
+            eta1 = (p / g) / Pss
+            JA1 = np.append(JA1, corrente / g)
+            PA1 = np.append(PA1, p / (g * g))
+            VA1 = np.append(VA1, v / g)
+            PsA1 = np.append(PsA1, Pss / (g))
+            etaA1 = np.append(etaA1, eta1)
+        P1A1c = PA1.tolist()
+        P1A1n = P1A1c.index(max(PA1))
+        Pmax = max(PA1)
+        Vmax = VA1[P1A1n]
+        etamax = etaA1[P1A1n]
+
+        tunelamento = np.append(tunelamento, d)
+        deslocamento = np.append(deslocamento, x)
+        pmaximo = np.append(pmaximo, Pmax)
+        eficiencia = np.append(eficiencia, etamax)
+
+np.savetxt('mapa_tune_delta_Pmax.txt', np.transpose([np.real(tunelamento), np.real(deslocamento), np.real(pmaximo)]), fmt="%.8f")
+
+
+##################### EFFICIENCY AT MAXIMUM POWER  X  DELTA  X  TUNNELING  ###################
+
+np.savetxt('mapa_tune_delta_eta.txt', np.transpose([np.real(tunelamento), np.real(deslocamento), np.real(eficiencia)]), fmt="%.8f")
+
+############################## IM(COHERENCE)  X  DELTA  ##################################
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+g = 0.00414 # corresponde a t = 1 ns  
+gamma = 100*g
+Gamma = 0.05*g
+h = 1
+gamma1 = 1*g
+gamma2 = 1*g  
+p = 0*np.sqrt(gamma1*gamma2) # interferencia fano
+
+
+#Ordem rho[11] rho[13] rho[22] rho[24] rho[31] rho[33] rho[42] rho[44] rho[cc] rho[vv]
+
+
+def M(GAMMA):
+    Matriz = np.array([[1,0,1,0,0,1,0,1,1,1], [1j*Te/h,-gamma1*(n1+1)/2-gamma2*(n2+1)/2-gamma*(nc \
+    +1)/2-1j*omega12,0,p*(n1+n2)/2,0,-1j*Te/h,0,0,0,0], [gamma1*(n1+1),0,-Gamma*nv-gamma1*n1,1j*Th/h, \
+    0,0,-1j*Th/h,0,0,Gamma*(nv+1)], [0,p*(n1+n2+2)/2,1j*Th/h,-gamma1*(n1)/2-gamma2*(n2)/2-Gamma*(nv)/2 \
+    -1j*omega34,0,0,0,-1j*Th/h,0,0], [-1j*Te/h,0,0,0,-gamma1*(n1+1)/2-gamma2*(n2+1)/2-gamma*(nc+1)/2+1j*omega21,1j*Te/h, \
+    p*(n1+n2)/2,0,0,0], [0,-1j*Te/h,0,0,1j*Te/h,-gamma2*(n2+1)-gamma*(nc+1),0,gamma2*n2,gamma*nc,0], [0,0, \
+    -1j*Th/h,0,p*(n1+n2+2)/2,0,-gamma1*(n1)/2-gamma2*(n2)/2-Gamma*(nv)/2+1j*omega43,1j*Th/h,0,0], [0,0, \
+    0,-1j*Th/h,0,gamma2*(n2+1),1j*Th/h,-n2*gamma2,0,0], [0,0,0,0,0,gamma*(nc+1),0,0,-gamma*nc-GAMMA,0], \
+    [0,0,Gamma*nv,0,0,0,0,0,GAMMA,-Gamma*(nv+1)]])
+    return(Matriz)
+
+B = np.array([1,0,0,0,0,0,0,0,0,0])
+
+npoints = 79
+gammaoi = 0.01
+gammaof = 1*10**(6)
+x = np.arange(1, npoints, 1)
+y = (gammaoi*gammaof*(npoints-1))/((gammaof-gammaoi)*(x-1)+gammaoi*(npoints-1))
+
+xlist = np.arange(-6, 6, 0.01)
+
+###################   For d = 2 nm
+
+deslocamentod2 = np.array([])
+rho12d2 = np.array([])
+
+d = 2
+Te = 0.5*(11.672*np.exp(-d/7.14))
+Th = 0.5*(2.202*np.exp(-d/3.37))
+for x in xlist:
+    omega12 = 3 + x # meV
+    omega21 = 3 + x # meV
+    omega34 = 3 - x  # meV
+    omega43 = 3 - x  # meV
+    omega63 = 2  # meV
+    omega25 = 2  # meV
+
+    e = 1  
+    E13 = 1115  # meV
+    E24 = E13 - omega12 - omega34  # meV
+    E2c = omega25  # meV
+    E3v = omega63  # meV
+    Ecv = E13 - omega12 - omega25 - omega63  # meV
+    k = 1  
+
+    Ts = 500  # meV
+    Ta = 25.9  # meV
+
+    n2 = 1/(np.exp(E24/(k*Ts)) - 1)
+    n1 = 1/(np.exp(E13/(k*Ts)) - 1)
+    nc = 1/(np.exp(E2c/(k*Ta)) - 1)
+    nv = 1/(np.exp(E3v/(k*Ta)) - 1)
+
+    V0A1 = np.array([])
+    J0A1 = np.array([])
+    P1A1 = np.array([])
+    CA1 = np.array([])
+    idx = 1
+    for GAMMA in y:
+        solve = np.linalg.solve(M(GAMMA), B)
+        corrente = e*GAMMA*solve[8]
+        v = (Ecv + k*Ta*np.log(solve[8]/solve[9]))/(e/g)
+        p = corrente*v
+        J0A1 = np.append(J0A1, corrente/g)
+        P1A1 = np.append(P1A1, p/(g*g))
+        V0A1 = np.append(V0A1, v/g)
+        CA1 = np.append(CA1, (solve[3]))
+    P1A1c = P1A1.tolist()
+    P1A1n = P1A1c.index(max(P1A1))
+
+    deslocamentod2 = np.append(deslocamentod2, x)
+    rho12d2 = np.append(rho12d2, np.imag(CA1[P1A1n]))
+
+###################   For d = 10 nm
+
+deslocamentod10 = np.array([])
+rho12d10 = np.array([])
+
+d = 10
+Te = 0.5*(11.672*np.exp(-d/7.14))  
+Th = 0.5*(2.202*np.exp(-d/3.37))  
+for x in xlist:
+    omega12 = 3 + x # meV
+    omega21 = 3 + x # meV
+    omega34 = 3 - x  # meV
+    omega43 = 3 - x  # meV
+    omega63 = 2  # meV
+    omega25 = 2  # meV
+
+    e = 1  
+    E13 = 1115  # meV
+    E24 = E13 - omega12 - omega34  # meV
+    E2c = omega25  # meV
+    E3v = omega63  # meV
+    Ecv = E13 - omega12 - omega25 - omega63  # meV
+    k = 1  
+
+    Ts = 500  # meV
+    Ta = 25.9  # meV
+
+    n2 = 1/(np.exp(E24/(k*Ts)) - 1)
+    n1 = 1/(np.exp(E13/(k*Ts)) - 1)
+    nc = 1/(np.exp(E2c/(k*Ta)) - 1)
+    nv = 1/(np.exp(E3v/(k*Ta)) - 1)
+
+    V0A1 = np.array([])
+    J0A1 = np.array([])
+    P1A1 = np.array([])
+    CA1 = np.array([])
+    idx = 1
+    for GAMMA in y:
+        solve = np.linalg.solve(M(GAMMA), B)
+        corrente = e*GAMMA*solve[8]
+        v = (Ecv + k*Ta*np.log(solve[8]/solve[9]))/(e/g)
+        p = corrente*v
+        J0A1 = np.append(J0A1, corrente/g)
+        P1A1 = np.append(P1A1, p/(g*g))
+        V0A1 = np.append(V0A1, v/g)
+        CA1 = np.append(CA1, (solve[3]))
+    P1A1c = P1A1.tolist()
+    P1A1n = P1A1c.index(max(P1A1))
+
+    deslocamentod10 = np.append(deslocamentod10, x)
+    rho12d10 = np.append(rho12d10, np.imag(CA1[P1A1n]))
+
+plt.plot(deslocamentod2, rho12d2*1000, '-', color='firebrick', linewidth=1.5, label=r'$d=2$ nm')
+plt.plot(deslocamentod10, rho12d10*1000, '--', color='firebrick', linewidth=1.5, label=r'$d=10$ nm')
+
+plt.ylim(0)
+plt.xlim(-6, 6)
+plt.ylabel(r'$\Im(\hat{\rho}_{24})$ x $10^{-3}$', fontsize=15)
+plt.xlabel(r'$\delta$ (meV)', fontsize=15)
+plt.legend()
+plt.show()
+
+############################## RE(COHERENCE)  X  DELTA  ##################################
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+g = 0.00414 # corresponde a t = 1 ns  
+gamma = 100*g
+Gamma = 0.05*g
+h = 1
+gamma1 = 1*g
+gamma2 = 1*g  
+p = 0*np.sqrt(gamma1*gamma2) # interferencia fano
+
+
+#Ordem rho[11] rho[13] rho[22] rho[24] rho[31] rho[33] rho[42] rho[44] rho[cc] rho[vv]
+
+
+def M(GAMMA):
+    Matriz = np.array([[1,0,1,0,0,1,0,1,1,1], [1j*Te/h,-gamma1*(n1+1)/2-gamma2*(n2+1)/2-gamma*(nc \
+    +1)/2-1j*omega12,0,p*(n1+n2)/2,0,-1j*Te/h,0,0,0,0], [gamma1*(n1+1),0,-Gamma*nv-gamma1*n1,1j*Th/h, \
+    0,0,-1j*Th/h,0,0,Gamma*(nv+1)], [0,p*(n1+n2+2)/2,1j*Th/h,-gamma1*(n1)/2-gamma2*(n2)/2-Gamma*(nv)/2 \
+    -1j*omega34,0,0,0,-1j*Th/h,0,0], [-1j*Te/h,0,0,0,-gamma1*(n1+1)/2-gamma2*(n2+1)/2-gamma*(nc+1)/2+1j*omega21,1j*Te/h, \
+    p*(n1+n2)/2,0,0,0], [0,-1j*Te/h,0,0,1j*Te/h,-gamma2*(n2+1)-gamma*(nc+1),0,gamma2*n2,gamma*nc,0], [0,0, \
+    -1j*Th/h,0,p*(n1+n2+2)/2,0,-gamma1*(n1)/2-gamma2*(n2)/2-Gamma*(nv)/2+1j*omega43,1j*Th/h,0,0], [0,0, \
+    0,-1j*Th/h,0,gamma2*(n2+1),1j*Th/h,-n2*gamma2,0,0], [0,0,0,0,0,gamma*(nc+1),0,0,-gamma*nc-GAMMA,0], \
+    [0,0,Gamma*nv,0,0,0,0,0,GAMMA,-Gamma*(nv+1)]])
+    return(Matriz)
+
+B = np.array([1,0,0,0,0,0,0,0,0,0])
+
+npoints = 79
+gammaoi = 0.01
+gammaof = 1*10**(6)
+x = np.arange(1, npoints, 1)
+y = (gammaoi*gammaof*(npoints-1))/((gammaof-gammaoi)*(x-1)+gammaoi*(npoints-1))
+
+xlist = np.arange(-6, 6, 0.01)
+
+###################   For d = 2 nm
+
+deslocamentod2 = np.array([])
+rho12d2 = np.array([])
+
+d = 2
+Te = 0.5*(11.672*np.exp(-d/7.14))
+Th = 0.5*(2.202*np.exp(-d/3.37))
+for x in xlist:
+    omega12 = 3 + x # meV
+    omega21 = 3 + x # meV
+    omega34 = 3 - x  # meV
+    omega43 = 3 - x  # meV
+    omega63 = 2  # meV
+    omega25 = 2  # meV
+
+    e = 1  
+    E13 = 1115  # meV
+    E24 = E13 - omega12 - omega34  # meV
+    E2c = omega25  # meV
+    E3v = omega63  # meV
+    Ecv = E13 - omega12 - omega25 - omega63  # meV
+    k = 1  
+
+    Ts = 500  # meV
+    Ta = 25.9  # meV
+
+    n2 = 1/(np.exp(E24/(k*Ts)) - 1)
+    n1 = 1/(np.exp(E13/(k*Ts)) - 1)
+    nc = 1/(np.exp(E2c/(k*Ta)) - 1)
+    nv = 1/(np.exp(E3v/(k*Ta)) - 1)
+
+    V0A1 = np.array([])
+    J0A1 = np.array([])
+    P1A1 = np.array([])
+    CA1 = np.array([])
+    idx = 1
+    for GAMMA in y:
+        solve = np.linalg.solve(M(GAMMA), B)
+        corrente = e*GAMMA*solve[8]
+        v = (Ecv + k*Ta*np.log(solve[8]/solve[9]))/(e/g)
+        p = corrente*v
+        J0A1 = np.append(J0A1, corrente/g)
+        P1A1 = np.append(P1A1, p/(g*g))
+        V0A1 = np.append(V0A1, v/g)
+        CA1 = np.append(CA1, (solve[3]))
+    P1A1c = P1A1.tolist()
+    P1A1n = P1A1c.index(max(P1A1))
+
+    deslocamentod2 = np.append(deslocamentod2, x)
+    rho12d2 = np.append(rho12d2, np.real(CA1[P1A1n]))
+
+###################   For d = 10 nm
+
+deslocamentod10 = np.array([])
+rho12d10 = np.array([])
+
+d = 10
+Te = 0.5*(11.672*np.exp(-d/7.14))  
+Th = 0.5*(2.202*np.exp(-d/3.37))  
+for x in xlist:
+    omega12 = 3 + x # meV
+    omega21 = 3 + x # meV
+    omega34 = 3 - x  # meV
+    omega43 = 3 - x  # meV
+    omega63 = 2  # meV
+    omega25 = 2  # meV
+
+    e = 1  
+    E13 = 1115  # meV
+    E24 = E13 - omega12 - omega34  # meV
+    E2c = omega25  # meV
+    E3v = omega63  # meV
+    Ecv = E13 - omega12 - omega25 - omega63  # meV
+    k = 1  
+
+    Ts = 500  # meV
+    Ta = 25.9  # meV
+
+    n2 = 1/(np.exp(E24/(k*Ts)) - 1)
+    n1 = 1/(np.exp(E13/(k*Ts)) - 1)
+    nc = 1/(np.exp(E2c/(k*Ta)) - 1)
+    nv = 1/(np.exp(E3v/(k*Ta)) - 1)
+
+    V0A1 = np.array([])
+    J0A1 = np.array([])
+    P1A1 = np.array([])
+    CA1 = np.array([])
+    idx = 1
+    for GAMMA in y:
+        solve = np.linalg.solve(M(GAMMA), B)
+        corrente = e*GAMMA*solve[8]
+        v = (Ecv + k*Ta*np.log(solve[8]/solve[9]))/(e/g)
+        p = corrente*v
+        J0A1 = np.append(J0A1, corrente/g)
+        P1A1 = np.append(P1A1, p/(g*g))
+        V0A1 = np.append(V0A1, v/g)
+        CA1 = np.append(CA1, (solve[3]))
+    P1A1c = P1A1.tolist()
+    P1A1n = P1A1c.index(max(P1A1))
+
+    deslocamentod10 = np.append(deslocamentod10, x)
+    rho12d10 = np.append(rho12d10, np.real(CA1[P1A1n]))
+
+plt.plot(deslocamentod2, rho12d2*100, '-', color='firebrick', linewidth=1.5, label=r'$d=2$ nm')
+plt.plot(deslocamentod10, rho12d10*100, '--', color='firebrick', linewidth=1.5, label=r'$d=10$ nm')
+
+plt.xlim(-6, 6)
+plt.ylabel(r'$\Re(\hat{\rho}_{24})$ x $10^{-2}$', fontsize=15)
+plt.xlabel(r'$\delta$ (meV)', fontsize=15)
+plt.legend()
+plt.show()
+
+############################## MAXIMUM POWER  X  DELTA  ##################################
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+g = 0.00414 # corresponde a t = 1 ns  
+gamma = 100*g
+Gamma = 0.05*g
+h = 1
+gamma1 = 1*g
+gamma2 = 1*g  
+p = 0*np.sqrt(gamma1*gamma2) # interferencia fano
+G = 0.05
+wc = 1 # meV
+ws = (343/0.0006)*6.58211915*10**(-13) # meV
+H = 1
+
+
+#Ordem rho[11] rho[13] rho[22] rho[24] rho[31] rho[33] rho[42] rho[44] rho[cc] rho[vv]
+
+def M(GAMMA):
+    Matriz = np.array([[1,0,1,0,0,1,0,1,1,1], [1j*Te,-(1/2)*gamma1*(n1+1)-(1/2)*gamma2*(n2+1)-(1/2)*gamma*(nc+1)\
+    -(1/2)*gamma12*(n12+1)-(1/2)*gamma12*n12-1j*omega12,0,0,0,-1j*Te,0,0,0,0], [-gamma1*(-n1-1),0,-gamma1*n1\
+    -Gamma*nv-gamma34*(n34),1j*Th,0,0,-1j*Th,gamma34*(n34+1),0,Gamma*(nv+1)], [0,0,1j*Th,-(1/2)*gamma1*n1\
+    -(1/2)*gamma2*n2-(1/2)*Gamma*nv-(1/2)*gamma34*(n34+1)-(1/2)*gamma34*n34-1j*omega34,0,0,0,-1j*Th,0,0],\
+    [-1j*Te,0,0,0,-(1/2)*gamma1*(n1+1)-(1/2)*gamma2*(n2+1)-(1/2)*gamma*(nc+1)-(1/2)*gamma12*(n12+1)\
+    -(1/2)*gamma12*n12+1j*omega21,1j*Te,0,0,0,0], [-gamma12*(-n12-1),-1j*Te,0,0,1j*Te,-gamma2*(n2+1)-gamma*(nc+1)\
+    -gamma12*n12,0,gamma2*n2, gamma*nc,0], [0,0,-1j*Th,0,0,0,-(1/2)*gamma1*n1-(1/2)*gamma2*n2-(1/2)*Gamma*nv\
+    -(1/2)*gamma34*(n34+1)-(1/2)*gamma34*n34+1j*omega43,1j*Th,0,0], [0,0,-gamma34*(-n34),-1j*Th,0,-gamma2*(-n2-1),1j*Th,\
+    -gamma2*n2-gamma34*(n34+1),0,0], [0,0,0,0,0,-gamma*(-nc-1),0,0,-gamma*nc-GAMMA,0], [0,0,Gamma*nv,0,0,0,0,0,GAMMA,-Gamma*(nv+1)]])
+    return (Matriz)
+
+B = np.array([1,0,0,0,0,0,0,0,0,0])
+
+npoints = 79
+gammaoi = 0.01
+gammaof = 1*10**(6)
+x = np.arange(1, npoints, 1)
+y = (gammaoi*gammaof*(npoints-1))/((gammaof-gammaoi)*(x-1)+gammaoi*(npoints-1))
+
+xlist = np.linspace(-6,6,15)
+Plist = np.array([])
+for x in xlist:
+    d = 2
+    Te = 1*0.5*(11.672*np.exp(-d/7.14))  # -0.012 + 13.135*np.exp(-d/7)
+    Th = 1*0.5*(2.202*np.exp(-d/3.37))  # -0.0012 + 2.384*np.exp(-d/3.25)
+    omega12 = 3 + x # meV
+    omega21 = 3 + x # meV
+    omega34 = 3 - x  # meV
+    omega43 = 3 - x  # meV
+    omega63 = 2  # meV
+    omega25 = 2  # meV
+    
+    e = 1  
+    E13 = 1115  # meV
+    E24 = E13 - omega12 - omega34  # meV
+    E2c = omega25  # meV
+    E3v = omega63  # meV
+    Ecv = E13 - omega12 - omega25 - omega63  # meV
+    k = 1  
+    Ts = 500  # meV
+    Ta = 25.9  # meV
+    
+    gamma12 = 1*2*np.pi*G*(Te/omega12)**2*(omega12/H)*(1-np.sin(omega12/(h*ws))/(omega12/(h*ws)))*e**(-omega12/(h*wc))
+    gamma34 = 1*2*np.pi*G*(Th/omega34)**2*(omega34/H)*(1-np.sin(omega34/(h*ws))/(omega34/(h*ws)))*e**(-omega34/(h*wc))
+    
+    n12 = 1/(np.exp(omega12/(k*Ta)) - 1 + 0.0000000001)
+    n34 = 1/(np.exp(omega34/(k*Ta)) - 1 + 0.0000000001)
+    
+    n2 = 1/(np.exp(E24/(k*Ts)) - 1)
+    n1 = 1/(np.exp(E13/(k*Ts)) - 1)
+    nc = 1/(np.exp(E2c/(k*Ta)) - 1)
+    nv = 1/(np.exp(E3v/(k*Ta)) - 1)
+    
+    VA1 = np.array([])
+    JA1 = np.array([])
+    PA1 = np.array([])
+    PsA1 = np.array([])
+    etaA1 = np.array([])
+    idx = 1
+    for GAMMA in y:
+        solve = np.linalg.solve(M(GAMMA), B)
+        corrente = e * GAMMA * solve[8]
+        v = (Ecv + k * Ta * np.log(solve[8] / solve[9])) / (e / g)
+        p = corrente * v
+        Pss = E13 * corrente
+        eta1 = (p / g) / Pss
+        JA1 = np.append(JA1, corrente / g)
+        PA1 = np.append(PA1, p / (g * g))
+        VA1 = np.append(VA1, v / g)
+        PsA1 = np.append(PsA1, Pss / (g))
+        etaA1 = np.append(etaA1, eta1)
+    P1A1c = PA1.tolist()
+    P1A1n = P1A1c.index(max(PA1))
+    Pmax = max(PA1)
+    Plist = np.append(Plist, Pmax)
+    Vmax = VA1[P1A1n]
+    etamax = etaA1[P1A1n]
+
+plt.plot(xlist, Plist, '-', color='black', label=r'$T_{e,h}$')
+
+xlist = np.linspace(-6,6,15)
+Plist = np.array([])
+for x in xlist:
+    d = 2
+    Te = 0.1*0.5*(11.672*np.exp(-d/7.14))  # -0.012 + 13.135*np.exp(-d/7)
+    Th = 0.1*0.5*(2.202*np.exp(-d/3.37))  # -0.0012 + 2.384*np.exp(-d/3.25)
+    omega12 = 3 + x # meV
+    omega21 = 3 + x # meV
+    omega34 = 3 - x  # meV
+    omega43 = 3 - x  # meV
+    omega63 = 2  # meV
+    omega25 = 2  # meV
+    
+    e = 1
+    E13 = 1115  # meV
+    E24 = E13 - omega12 - omega34  # meV
+    E2c = omega25  # meV
+    E3v = omega63  # meV
+    Ecv = E13 - omega12 - omega25 - omega63  # meV
+    k = 1  
+    Ts = 500  # meV
+    Ta = 25.9  # meV
+    
+    gamma12 = 1*2*np.pi*G*(Te/omega12)**2*(omega12/H)*(1-np.sin(omega12/(h*ws))/(omega12/(h*ws)))*e**(-omega12/(h*wc))
+    gamma34 = 1*2*np.pi*G*(Th/omega34)**2*(omega34/H)*(1-np.sin(omega34/(h*ws))/(omega34/(h*ws)))*e**(-omega34/(h*wc))
+    
+    n12 = 1/(np.exp(omega12/(k*Ta)) - 1 + 0.0000000001)
+    n34 = 1/(np.exp(omega34/(k*Ta)) - 1 + 0.0000000001)
+    
+    n2 = 1/(np.exp(E24/(k*Ts)) - 1)
+    n1 = 1/(np.exp(E13/(k*Ts)) - 1)
+    nc = 1/(np.exp(E2c/(k*Ta)) - 1)
+    nv = 1/(np.exp(E3v/(k*Ta)) - 1)
+    
+    VA1 = np.array([])
+    JA1 = np.array([])
+    PA1 = np.array([])
+    PsA1 = np.array([])
+    etaA1 = np.array([])
+    idx = 1
+    for GAMMA in y:
+        solve = np.linalg.solve(M(GAMMA), B)
+        corrente = e * GAMMA * solve[8]
+        v = (Ecv + k * Ta * np.log(solve[8] / solve[9])) / (e / g)
+        p = corrente * v
+        Pss = E13 * corrente
+        eta1 = (p / g) / Pss
+        JA1 = np.append(JA1, corrente / g)
+        PA1 = np.append(PA1, p / (g * g))
+        VA1 = np.append(VA1, v / g)
+        PsA1 = np.append(PsA1, Pss / (g))
+        etaA1 = np.append(etaA1, eta1)
+    P1A1c = PA1.tolist()
+    P1A1n = P1A1c.index(max(PA1))
+    Pmax = max(PA1)
+    Plist = np.append(Plist, Pmax)
+    Vmax = VA1[P1A1n]
+    etamax = etaA1[P1A1n]
+
+plt.plot(xlist, Plist, '--', color='green', label=r'$0.1T_{e,h}$')
+
+
+xlist = np.linspace(-6,6,40)
+Plist = np.array([])
+for x in xlist:
+    d = 2
+    Te = 0.01*0.5*(11.672*np.exp(-d/7.14))  # -0.012 + 13.135*np.exp(-d/7)
+    Th = 0.01*0.5*(2.202*np.exp(-d/3.37))  # -0.0012 + 2.384*np.exp(-d/3.25)
+    omega12 = 3 + x # meV
+    omega21 = 3 + x # meV
+    omega34 = 3 - x  # meV
+    omega43 = 3 - x  # meV
+    omega63 = 2  # meV
+    omega25 = 2  # meV
+    
+    e = 1  
+    E13 = 1115  # meV
+    E24 = E13 - omega12 - omega34  # meV
+    E2c = omega25  # meV
+    E3v = omega63  # meV
+    Ecv = E13 - omega12 - omega25 - omega63  # meV
+    k = 1  
+    Ts = 500  # meV
+    Ta = 25.9  # meV
+    
+    gamma12 = 1*2*np.pi*G*(Te/omega12)**2*(omega12/H)*(1-np.sin(omega12/(h*ws))/(omega12/(h*ws)))*e**(-omega12/(h*wc))
+    gamma34 = 1*2*np.pi*G*(Th/omega34)**2*(omega34/H)*(1-np.sin(omega34/(h*ws))/(omega34/(h*ws)))*e**(-omega34/(h*wc))
+    
+    n12 = 1/(np.exp(omega12/(k*Ta)) - 1 + 0.0000000001)
+    n34 = 1/(np.exp(omega34/(k*Ta)) - 1 + 0.0000000001)
+    
+    n2 = 1/(np.exp(E24/(k*Ts)) - 1)
+    n1 = 1/(np.exp(E13/(k*Ts)) - 1)
+    nc = 1/(np.exp(E2c/(k*Ta)) - 1)
+    nv = 1/(np.exp(E3v/(k*Ta)) - 1)
+    
+    VA1 = np.array([])
+    JA1 = np.array([])
+    PA1 = np.array([])
+    PsA1 = np.array([])
+    etaA1 = np.array([])
+    idx = 1
+    for GAMMA in y:
+        solve = np.linalg.solve(M(GAMMA), B)
+        corrente = e * GAMMA * solve[8]
+        v = (Ecv + k * Ta * np.log(solve[8] / solve[9])) / (e / g)
+        p = corrente * v
+        Pss = E13 * corrente
+        eta1 = (p / g) / Pss
+        JA1 = np.append(JA1, corrente / g)
+        PA1 = np.append(PA1, p / (g * g))
+        VA1 = np.append(VA1, v / g)
+        PsA1 = np.append(PsA1, Pss / (g))
+        etaA1 = np.append(etaA1, eta1)
+    P1A1c = PA1.tolist()
+    P1A1n = P1A1c.index(max(PA1))
+    Pmax = max(PA1)
+    Plist = np.append(Plist, Pmax)
+    Vmax = VA1[P1A1n]
+    etamax = etaA1[P1A1n]
+
+plt.plot(xlist, Plist,'-o', color='gray', label=r'$0.01T_{e,h}$')
+
+plt.xlim(-6,6)
+plt.legend()
+plt.show()
+
+######################### RELATIVE POWER  X  GAMMA_C  X  GAMMA_V  ##############################
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+g = 0.00414 # corresponde a t = 1 ns  
+h = 1
+gamma1 = 1*g
+gamma2 = 1*g  
+p = 0*np.sqrt(gamma1*gamma2) # interferencia fano
+
+
+#  Ordem rho[11] rho[13] rho[22] rho[24] rho[31] rho[33] rho[42] rho[44] rho[cc] rho[vv]
+
+
+def M(GAMMA):
+    Matriz = np.array([[1,0,1,0,0,1,0,1,1,1], [1j*Te/h,-gamma1*(n1+1)/2-gamma2*(n2+1)/2-gamma*(nc \
+    +1)/2-1j*omega12,0,p*(n1+n2)/2,0,-1j*Te/h,0,0,0,0], [gamma1*(n1+1),0,-Gamma*nv-gamma1*n1,1j*Th/h, \
+    0,0,-1j*Th/h,0,0,Gamma*(nv+1)], [0,p*(n1+n2+2)/2,1j*Th/h,-gamma1*(n1)/2-gamma2*(n2)/2-Gamma*(nv)/2 \
+    -1j*omega34,0,0,0,-1j*Th/h,0,0], [-1j*Te/h,0,0,0,-gamma1*(n1+1)/2-gamma2*(n2+1)/2-gamma*(nc+1)/2+1j*omega21,1j*Te/h, \
+    p*(n1+n2)/2,0,0,0], [0,-1j*Te/h,0,0,1j*Te/h,-gamma2*(n2+1)-gamma*(nc+1),0,gamma2*n2,gamma*nc,0], [0,0, \
+    -1j*Th/h,0,p*(n1+n2+2)/2,0,-gamma1*(n1)/2-gamma2*(n2)/2-Gamma*(nv)/2+1j*omega43,1j*Th/h,0,0], [0,0, \
+    0,-1j*Th/h,0,gamma2*(n2+1),1j*Th/h,-n2*gamma2,0,0], [0,0,0,0,0,gamma*(nc+1),0,0,-gamma*nc-GAMMA,0], \
+    [0,0,Gamma*nv,0,0,0,0,0,GAMMA,-Gamma*(nv+1)]])
+    return(Matriz)
+
+B = np.array([1,0,0,0,0,0,0,0,0,0])
+
+npoints = 79
+gammaoi = 0.01
+gammaof = 1*10**(6)
+x = np.arange(1, npoints, 1)
+y = (gammaoi*gammaof*(npoints-1))/((gammaof-gammaoi)*(x-1)+gammaoi*(npoints-1))
+
+galist = np.linspace(0.01*g, 100*g, 500)
+Galist = np.linspace(0.01*g, 10*g, 900)
+
+###############################  For d = 2 nm
+
+gammalista = np.array([])
+Gammalista = np.array([])
+Pmrelativa = np.array([])
+for gamma in galist:
+    d = 2
+    Te = 0.5*(11.672*np.exp(-d/7.14))  
+    Th = 0.5*(2.202*np.exp(-d/3.37))  
+    for Gamma in Galist:
+        x = 3
+        omega12 = 3 + x # meV
+        omega21 = 3 + x # meV
+        omega34 = 3 - x  # meV
+        omega43 = 3 - x  # meV
+        omega63 = 2  # meV
+        omega25 = 2  # meV
+
+        e = 1  
+        E13 = 1115  # meV
+        E24 = E13 - omega12 - omega34  # meV
+        E2c = omega25  # meV
+        E3v = omega63  # meV
+        Ecv = E13 - omega12 - omega25 - omega63  # meV
+        k = 1  
+
+        Ts = 500  # meV
+        Ta = 25.9  # meV
+
+        n2 = 1/(np.exp(E24/(k*Ts)) - 1)
+        n1 = 1/(np.exp(E13/(k*Ts)) - 1)
+        nc = 1/(np.exp(E2c/(k*Ta)) - 1)
+        nv = 1/(np.exp(E3v/(k*Ta)) - 1)
+
+        VA1 = np.array([])
+        JA1 = np.array([])
+        PA1 = np.array([])
+        PsA1 = np.array([])
+        etaA1 = np.array([])
+        idx = 1
+        for GAMMA in y:
+            solve = np.linalg.solve(M(GAMMA), B)
+            corrente = e * GAMMA * solve[8]
+            v = (Ecv + k * Ta * np.log(solve[8] / solve[9])) / (e / g)
+            p = corrente * v
+            Pss = E13 * corrente
+            eta1 = (p / g) / Pss
+            JA1 = np.append(JA1, corrente / g)
+            PA1 = np.append(PA1, p / (g * g))
+            VA1 = np.append(VA1, v / g)
+            PsA1 = np.append(PsA1, Pss / (g))
+            etaA1 = np.append(etaA1, eta1)
+        P1A1c = PA1.tolist()
+        P1A1n = P1A1c.index(max(PA1))
+        Pmax = max(PA1)
+        Vmax = VA1[P1A1n]
+        etamax = etaA1[P1A1n]
+
+        ############################# SQD
+        GAMMA1 = Gamma  
+        Eab = E13  # meV
+        Eac = E2c  # meV
+        Evb = E3v  # meV
+        Ecv = Eab - Eac - Evb  # meV
+
+        n1 = 1/(np.exp(Eab/(k*Ts)) - 1)
+        nc = 1/(np.exp(Eac/(k*Ta)) - 1)
+        nv = 1/(np.exp(Evb/(k*Ta)) - 1)
+
+        # rho[cc]
+        def rhocc(GAMMA):
+            analitico = GAMMA1*gamma*gamma1*n1*(nv + 1)*(nc + 1)/((((((4*nv + 3)*nc + nv + 1)*n1 + nc*(2*nv + 1))*gamma \
+                        + (3*((nv + 2/3)*n1 + (2 / 3)*nv + 1/3))*GAMMA)*gamma1 + (2*(nc + 1))*gamma*(nv + 1/2)*GAMMA)*GAMMA1 \
+                        + GAMMA*gamma*n1*gamma1*(nc + 1))
+            return (analitico)
+
+        # rho[vv]
+        def rhovv(GAMMA):
+            analitico = (((n1 + 1)*(gamma*nc + GAMMA)*gamma1 + GAMMA*gamma*(nc + 1))*nv*GAMMA1 + GAMMA*gamma*n1*gamma1*(nc \
+                        + 1))/(((((3*(n1 + 2/3))*nv + 2*n1 + 1)*gamma1 + (2*(nc + 1))*(nv + 1/2)*gamma)*GAMMA1 + gamma*n1*gamma1*(nc \
+                        + 1))*GAMMA + (((4*nc + 1)*n1 + 2*nc)*nv + (3*nc + 1)*n1 + nc)*gamma*gamma1*GAMMA1)
+            return (analitico)
+
+
+        V0 = np.array([])
+        P0 = np.array([])
+        J0 = np.array([])
+        Ps0 = np.array([])
+        eta0 = np.array([])
+        for GAMMA in y:
+            corrente0 = e * GAMMA * rhocc(GAMMA)
+            v0 = (Ecv + k * Ta * np.log(rhocc(GAMMA) / rhovv(GAMMA))) / (e / g)
+            p0 = corrente0 * v0
+            Ps00 = Eab * corrente0
+            eta00 = (p0 / g) / Ps00
+            eta0 = np.append(eta0, eta00)
+            Ps0 = np.append(Ps0, Ps00 / g)
+            J0 = np.append(J0, corrente0 / g)
+            P0 = np.append(P0, p0 / (g * g))
+            V0 = np.append(V0, v0 / g)
+        P10c = P0.tolist()
+        P10n = P10c.index(max(P0))
+        P0PA1 = P0[P1A1n]
+        V0PA1 = V0[P1A1n]
+        eta0PA1 = eta0[P1A1n]
+
+        Pmrel = (Pmax - P0PA1)/P0PA1
+
+        gammalista = np.append(gammalista, gamma/g)
+        Gammalista = np.append(Gammalista, Gamma/g)
+        Pmrelativa = np.append(Pmrelativa, Pmrel)
+
+np.savetxt('mapa-Pmrelativo-d2_gamma_Gamma_Pmrelativo.txt', np.transpose([np.real(gammalista), np.real(Gammalista), np.real(Pmrelativa)]), fmt="%.8f")
+
+##############################   For d = 10 nm
+
+gammalista = np.array([])
+Gammalista = np.array([])
+Pmrelativa = np.array([])
+for gamma in galist:
+    d = 10
+    Te = 0.5*(11.672*np.exp(-d/7.14))  
+    Th = 0.5*(2.202*np.exp(-d/3.37))  
+    for Gamma in Galist:
+        x = 3
+        omega12 = 3 + x # meV
+        omega21 = 3 + x # meV
+        omega34 = 3 - x  # meV
+        omega43 = 3 - x  # meV
+        omega63 = 2  # meV
+        omega25 = 2  # meV
+
+        e = 1  
+        E13 = 1115  # meV
+        E24 = E13 - omega12 - omega34  # meV
+        E2c = omega25  # meV
+        E3v = omega63  # meV
+        Ecv = E13 - omega12 - omega25 - omega63  # meV
+        k = 1  
+
+        Ts = 500  # meV
+        Ta = 25.9  # meV
+
+        n2 = 1/(np.exp(E24/(k*Ts)) - 1)
+        n1 = 1/(np.exp(E13/(k*Ts)) - 1)
+        nc = 1/(np.exp(E2c/(k*Ta)) - 1)
+        nv = 1/(np.exp(E3v/(k*Ta)) - 1)
+
+        VA1 = np.array([])
+        JA1 = np.array([])
+        PA1 = np.array([])
+        PsA1 = np.array([])
+        etaA1 = np.array([])
+        idx = 1
+        for GAMMA in y:
+            solve = np.linalg.solve(M(GAMMA), B)
+            corrente = e * GAMMA * solve[8]
+            v = (Ecv + k * Ta * np.log(solve[8] / solve[9])) / (e / g)
+            p = corrente * v
+            Pss = E13 * corrente
+            eta1 = (p / g) / Pss
+            JA1 = np.append(JA1, corrente / g)
+            PA1 = np.append(PA1, p / (g * g))
+            VA1 = np.append(VA1, v / g)
+            PsA1 = np.append(PsA1, Pss / (g))
+            etaA1 = np.append(etaA1, eta1)
+        P1A1c = PA1.tolist()
+        P1A1n = P1A1c.index(max(PA1))
+        Pmax = max(PA1)
+        Vmax = VA1[P1A1n]
+        etamax = etaA1[P1A1n]
+
+        ############################## SQD
+        GAMMA1 = Gamma  
+        Eab = E13  # meV
+        Eac = E2c  # meV
+        Evb = E3v  # meV
+        Ecv = Eab - Eac - Evb  # meV
+
+        n1 = 1/(np.exp(Eab/(k*Ts)) - 1)
+        nc = 1/(np.exp(Eac/(k*Ta)) - 1)
+        nv = 1/(np.exp(Evb/(k*Ta)) - 1)
+
+        # rho[cc]
+        def rhocc(GAMMA):
+            analitico = GAMMA1*gamma*gamma1*n1*(nv + 1)*(nc + 1)/((((((4*nv + 3)*nc + nv + 1)*n1 + nc*(2*nv + 1))*gamma \
+                        + (3*((nv + 2/3)*n1 + (2 / 3)*nv + 1/3))*GAMMA)*gamma1 + (2*(nc + 1))*gamma*(nv + 1/2)*GAMMA)*GAMMA1 \
+                        + GAMMA*gamma*n1*gamma1*(nc + 1))
+            return (analitico)
+
+        # rho[vv]
+        def rhovv(GAMMA):
+            analitico = (((n1 + 1)*(gamma*nc + GAMMA)*gamma1 + GAMMA*gamma*(nc + 1))*nv*GAMMA1 + GAMMA*gamma*n1*gamma1*(nc \
+                        + 1))/(((((3*(n1 + 2/3))*nv + 2*n1 + 1)*gamma1 + (2*(nc + 1))*(nv + 1/2)*gamma)*GAMMA1 + gamma*n1*gamma1*(nc \
+                        + 1))*GAMMA + (((4*nc + 1)*n1 + 2*nc)*nv + (3*nc + 1)*n1 + nc)*gamma*gamma1*GAMMA1)
+            return (analitico)
+
+
+        V0 = np.array([])
+        P0 = np.array([])
+        J0 = np.array([])
+        Ps0 = np.array([])
+        eta0 = np.array([])
+        for GAMMA in y:
+            corrente0 = e * GAMMA * rhocc(GAMMA)
+            v0 = (Ecv + k * Ta * np.log(rhocc(GAMMA) / rhovv(GAMMA))) / (e / g)
+            p0 = corrente0 * v0
+            Ps00 = Eab * corrente0
+            eta00 = (p0 / g) / Ps00
+            eta0 = np.append(eta0, eta00)
+            Ps0 = np.append(Ps0, Ps00 / g)
+            J0 = np.append(J0, corrente0 / g)
+            P0 = np.append(P0, p0 / (g * g))
+            V0 = np.append(V0, v0 / g)
+        P10c = P0.tolist()
+        P10n = P10c.index(max(P0))
+        P0PA1 = P0[P1A1n]
+        V0PA1 = V0[P1A1n]
+        eta0PA1 = eta0[P1A1n]
+
+        Pmrel = (Pmax - P0PA1)/P0PA1
+
+        gammalista = np.append(gammalista, gamma/g)
+        Gammalista = np.append(Gammalista, Gamma/g)
+        Pmrelativa = np.append(Pmrelativa, Pmrel)
+
+np.savetxt('mapa-Pmrelativo-d10_gamma_Gamma_Pmrelativo.txt', np.transpose([np.real(gammalista), np.real(Gammalista), np.real(Pmrelativa)]), fmt="%.8f")
+
+######################### RELATIVE EFFICIENCY  X  GAMMA_C  X  GAMMA_V  ##############################
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+g = 0.00414 # corresponde a t = 1 ns   
+h = 1
+gamma1 = 1*g
+gamma2 = 1*g  
+p = 1*np.sqrt(gamma1*gamma2) # interferencia fano
+
+
+#Ordem rho[11] rho[13] rho[22] rho[24] rho[31] rho[33] rho[42] rho[44] rho[cc] rho[vv]
+
+
+def M(GAMMA):
+    Matriz = np.array([[1,0,1,0,0,1,0,1,1,1], [1j*Te/h,-gamma1*(n1+1)/2-gamma2*(n2+1)/2-gamma*(nc \
+    +1)/2-1j*omega12,0,p*(n1+n2)/2,0,-1j*Te/h,0,0,0,0], [gamma1*(n1+1),0,-Gamma*nv-gamma1*n1,1j*Th/h, \
+    0,0,-1j*Th/h,0,0,Gamma*(nv+1)], [0,p*(n1+n2+2)/2,1j*Th/h,-gamma1*(n1)/2-gamma2*(n2)/2-Gamma*(nv)/2 \
+    -1j*omega34,0,0,0,-1j*Th/h,0,0], [-1j*Te/h,0,0,0,-gamma1*(n1+1)/2-gamma2*(n2+1)/2-gamma*(nc+1)/2+1j*omega21,1j*Te/h, \
+    p*(n1+n2)/2,0,0,0], [0,-1j*Te/h,0,0,1j*Te/h,-gamma2*(n2+1)-gamma*(nc+1),0,gamma2*n2,gamma*nc,0], [0,0, \
+    -1j*Th/h,0,p*(n1+n2+2)/2,0,-gamma1*(n1)/2-gamma2*(n2)/2-Gamma*(nv)/2+1j*omega43,1j*Th/h,0,0], [0,0, \
+    0,-1j*Th/h,0,gamma2*(n2+1),1j*Th/h,-n2*gamma2,0,0], [0,0,0,0,0,gamma*(nc+1),0,0,-gamma*nc-GAMMA,0], \
+    [0,0,Gamma*nv,0,0,0,0,0,GAMMA,-Gamma*(nv+1)]])
+    return(Matriz)
+
+B = np.array([1,0,0,0,0,0,0,0,0,0])
+
+npoints = 79
+gammaoi = 0.01
+gammaof = 1*10**(6)
+x = np.arange(1, npoints, 1)
+y = (gammaoi*gammaof*(npoints-1))/((gammaof-gammaoi)*(x-1)+gammaoi*(npoints-1))
+
+galist = np.linspace(0.01*g, 100*g, 500)
+Galist = np.linspace(0.01*g, 10*g, 900)
+
+#############################  For d = 2  nm
+
+gammalista = np.array([])
+Gammalista = np.array([])
+etarelativa = np.array([])
+for gamma in galist:
+    d = 2
+    Te = 0.5*(11.672*np.exp(-d/7.14))  
+    Th = 0.5*(2.202*np.exp(-d/3.37))
+    for Gamma in Galist:
+        x = 3
+        omega12 = 3 + x # meV
+        omega21 = 3 + x # meV
+        omega34 = 3 - x  # meV
+        omega43 = 3 - x  # meV
+        omega63 = 2  # meV
+        omega25 = 2  # meV
+
+        e = 1
+        E13 = 1115  # meV
+        E24 = E13 - omega12 - omega34  # meV
+        E2c = omega25  # meV
+        E3v = omega63  # meV
+        Ecv = E13 - omega12 - omega25 - omega63  # meV
+        k = 1
+
+        Ts = 500  # meV
+        Ta = 25.9  # meV
+
+        n2 = 1/(np.exp(E24/(k*Ts)) - 1)
+        n1 = 1/(np.exp(E13/(k*Ts)) - 1)
+        nc = 1/(np.exp(E2c/(k*Ta)) - 1)
+        nv = 1/(np.exp(E3v/(k*Ta)) - 1)
+
+        VA1 = np.array([])
+        JA1 = np.array([])
+        PA1 = np.array([])
+        PsA1 = np.array([])
+        etaA1 = np.array([])
+        idx = 1
+        for GAMMA in y:
+            solve = np.linalg.solve(M(GAMMA), B)
+            corrente = e * GAMMA * solve[8]
+            v = (Ecv + k * Ta * np.log(solve[8] / solve[9])) / (e / g)
+            p = corrente * v
+            Pss = E13 * corrente
+            eta1 = (p / g) / Pss
+            JA1 = np.append(JA1, corrente / g)
+            PA1 = np.append(PA1, p / (g * g))
+            VA1 = np.append(VA1, v / g)
+            PsA1 = np.append(PsA1, Pss / (g))
+            etaA1 = np.append(etaA1, eta1)
+        P1A1c = PA1.tolist()
+        P1A1n = P1A1c.index(max(PA1))
+        Pmax = max(PA1)
+        Vmax = VA1[P1A1n]
+        etamax = etaA1[P1A1n]
+
+        ################################# SQD
+        GAMMA1 = Gamma  #
+        Eab = E13  # meV
+        Eac = E2c  # meV
+        Evb = E3v  # meV
+        Ecv = Eab - Eac - Evb  # meV
+
+        n1 = 1/(np.exp(Eab/(k*Ts)) - 1)
+        nc = 1/(np.exp(Eac/(k*Ta)) - 1)
+        nv = 1/(np.exp(Evb/(k*Ta)) - 1)
+
+        # rho[cc]
+        def rhocc(GAMMA):
+            analitico = GAMMA1*gamma*gamma1*n1*(nv + 1)*(nc + 1)/((((((4*nv + 3)*nc + nv + 1)*n1 + nc*(2*nv + 1))*gamma \
+                        + (3*((nv + 2/3)*n1 + (2 / 3)*nv + 1/3))*GAMMA)*gamma1 + (2*(nc + 1))*gamma*(nv + 1/2)*GAMMA)*GAMMA1 \
+                        + GAMMA*gamma*n1*gamma1*(nc + 1))
+            return (analitico)
+
+        # rho[vv]
+        def rhovv(GAMMA):
+            analitico = (((n1 + 1)*(gamma*nc + GAMMA)*gamma1 + GAMMA*gamma*(nc + 1))*nv*GAMMA1 + GAMMA*gamma*n1*gamma1*(nc \
+                        + 1))/(((((3*(n1 + 2/3))*nv + 2*n1 + 1)*gamma1 + (2*(nc + 1))*(nv + 1/2)*gamma)*GAMMA1 + gamma*n1*gamma1*(nc \
+                        + 1))*GAMMA + (((4*nc + 1)*n1 + 2*nc)*nv + (3*nc + 1)*n1 + nc)*gamma*gamma1*GAMMA1)
+            return (analitico)
+
+
+        V0 = np.array([])
+        P0 = np.array([])
+        J0 = np.array([])
+        Ps0 = np.array([])
+        eta0 = np.array([])
+        for GAMMA in y:
+            corrente0 = e * GAMMA * rhocc(GAMMA)
+            v0 = (Ecv + k * Ta * np.log(rhocc(GAMMA) / rhovv(GAMMA))) / (e / g)
+            p0 = corrente0 * v0
+            Ps00 = Eab * corrente0
+            eta00 = (p0 / g) / Ps00
+            eta0 = np.append(eta0, eta00)
+            Ps0 = np.append(Ps0, Ps00 / g)
+            J0 = np.append(J0, corrente0 / g)
+            P0 = np.append(P0, p0 / (g * g))
+            V0 = np.append(V0, v0 / g)
+        P10c = P0.tolist()
+        P10n = P10c.index(max(P0))
+        P0PA1 = P0[P1A1n]
+        V0PA1 = V0[P1A1n]
+        eta0PA1 = eta0[P1A1n]
+
+        etarel = (etamax - eta0PA1)/eta0PA1
+
+
+        gammalista = np.append(gammalista, gamma/g)
+        Gammalista = np.append(Gammalista, Gamma/g)
+        etarelativa = np.append(etarelativa, etarel)
+
+np.savetxt('mapa-etarelativo-d2-A1_gamma_Gamma_etarelativo.txt', np.transpose([np.real(gammalista), np.real(Gammalista), np.real(etarelativa)]), fmt="%.8f")
+
+
+############################  d = 10 nm
+
+gammalista = np.array([])
+Gammalista = np.array([])
+etarelativa = np.array([])
+for gamma in galist:
+    d = 10
+    Te = 0.5*(11.672*np.exp(-d/7.14))  
+    Th = 0.5*(2.202*np.exp(-d/3.37))
+    for Gamma in Galist:
+        x = 3
+        omega12 = 3 + x # meV
+        omega21 = 3 + x # meV
+        omega34 = 3 - x  # meV
+        omega43 = 3 - x  # meV
+        omega63 = 2  # meV
+        omega25 = 2  # meV
+
+        e = 1
+        E13 = 1115  # meV
+        E24 = E13 - omega12 - omega34  # meV
+        E2c = omega25  # meV
+        E3v = omega63  # meV
+        Ecv = E13 - omega12 - omega25 - omega63  # meV
+        k = 1
+
+        Ts = 500  # meV
+        Ta = 25.9  # meV
+
+        n2 = 1/(np.exp(E24/(k*Ts)) - 1)
+        n1 = 1/(np.exp(E13/(k*Ts)) - 1)
+        nc = 1/(np.exp(E2c/(k*Ta)) - 1)
+        nv = 1/(np.exp(E3v/(k*Ta)) - 1)
+
+        VA1 = np.array([])
+        JA1 = np.array([])
+        PA1 = np.array([])
+        PsA1 = np.array([])
+        etaA1 = np.array([])
+        idx = 1
+        for GAMMA in y:
+            solve = np.linalg.solve(M(GAMMA), B)
+            corrente = e * GAMMA * solve[8]
+            v = (Ecv + k * Ta * np.log(solve[8] / solve[9])) / (e / g)
+            p = corrente * v
+            Pss = E13 * corrente
+            eta1 = (p / g) / Pss
+            JA1 = np.append(JA1, corrente / g)
+            PA1 = np.append(PA1, p / (g * g))
+            VA1 = np.append(VA1, v / g)
+            PsA1 = np.append(PsA1, Pss / (g))
+            etaA1 = np.append(etaA1, eta1)
+        P1A1c = PA1.tolist()
+        P1A1n = P1A1c.index(max(PA1))
+        Pmax = max(PA1)
+        Vmax = VA1[P1A1n]
+        etamax = etaA1[P1A1n]
+
+        ################################ SQD
+        GAMMA1 = Gamma  
+        Eab = E13  # meV
+        Eac = E2c  # meV
+        Evb = E3v  # meV
+        Ecv = Eab - Eac - Evb  # meV
+
+        n1 = 1/(np.exp(Eab/(k*Ts)) - 1)
+        nc = 1/(np.exp(Eac/(k*Ta)) - 1)
+        nv = 1/(np.exp(Evb/(k*Ta)) - 1)
+
+        # rho[cc]
+        def rhocc(GAMMA):
+            analitico = GAMMA1*gamma*gamma1*n1*(nv + 1)*(nc + 1)/((((((4*nv + 3)*nc + nv + 1)*n1 + nc*(2*nv + 1))*gamma \
+                        + (3*((nv + 2/3)*n1 + (2 / 3)*nv + 1/3))*GAMMA)*gamma1 + (2*(nc + 1))*gamma*(nv + 1/2)*GAMMA)*GAMMA1 \
+                        + GAMMA*gamma*n1*gamma1*(nc + 1))
+            return (analitico)
+
+        # rho[vv]
+        def rhovv(GAMMA):
+            analitico = (((n1 + 1)*(gamma*nc + GAMMA)*gamma1 + GAMMA*gamma*(nc + 1))*nv*GAMMA1 + GAMMA*gamma*n1*gamma1*(nc \
+                        + 1))/(((((3*(n1 + 2/3))*nv + 2*n1 + 1)*gamma1 + (2*(nc + 1))*(nv + 1/2)*gamma)*GAMMA1 + gamma*n1*gamma1*(nc \
+                        + 1))*GAMMA + (((4*nc + 1)*n1 + 2*nc)*nv + (3*nc + 1)*n1 + nc)*gamma*gamma1*GAMMA1)
+            return (analitico)
+
+
+        V0 = np.array([])
+        P0 = np.array([])
+        J0 = np.array([])
+        Ps0 = np.array([])
+        eta0 = np.array([])
+        for GAMMA in y:
+            corrente0 = e * GAMMA * rhocc(GAMMA)
+            v0 = (Ecv + k * Ta * np.log(rhocc(GAMMA) / rhovv(GAMMA))) / (e / g)
+            p0 = corrente0 * v0
+            Ps00 = Eab * corrente0
+            eta00 = (p0 / g) / Ps00
+            eta0 = np.append(eta0, eta00)
+            Ps0 = np.append(Ps0, Ps00 / g)
+            J0 = np.append(J0, corrente0 / g)
+            P0 = np.append(P0, p0 / (g * g))
+            V0 = np.append(V0, v0 / g)
+        P10c = P0.tolist()
+        P10n = P10c.index(max(P0))
+        P0PA1 = P0[P1A1n]
+        V0PA1 = V0[P1A1n]
+        eta0PA1 = eta0[P1A1n]
+
+        etarel = (etamax - eta0PA1)/eta0PA1
+
+
+        gammalista = np.append(gammalista, gamma/g)
+        Gammalista = np.append(Gammalista, Gamma/g)
+        etarelativa = np.append(etarelativa, etarel)
+
+np.savetxt('mapa-etarelativo-d10-A1_gamma_Gamma_etarelativo.txt', np.transpose([np.real(gammalista), np.real(Gammalista), np.real(etarelativa)]), fmt="%.8f")
+
+#######################################  EFFICIENCY  X  Ta/Ts  #############3##############################
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+g = 0.00414 # corresponde a t = 1 ns  
+gamma = 100*g
+Gamma = 0.05*g
+h = 1
+gamma1 = 1*g
+gamma2 = 1*g  
+p = 0*np.sqrt(gamma1*gamma2) # interferencia fano
+
+taulist = np.linspace(0,1,30)
+
+xi = 3
+omega12 = 3 + xi # meV
+omega21 = 3 + xi # meV
+omega34 = 3 - xi # meV
+omega43 = 3 - xi # meV
+omega63 = 2 # meV
+omega25 = 2 # meV
+
+e = 1
+E13 = 1115 # meV
+E24 = E13 - omega12 - omega34 # meV
+E2c = omega25 # meV
+E3v = omega63 # meV
+Ecv = E13 - omega12 - omega25 - omega63 # meV
+k = 1
+
+#Ordem rho[11] rho[13] rho[22] rho[24] rho[31] rho[33] rho[42] rho[44] rho[cc] rho[vv]
+
+
+def M(GAMMA):
+    Matriz = np.array([[1,0,1,0,0,1,0,1,1,1], [1j*Te/h,-gamma1*(n1+1)/2-gamma2*(n2+1)/2-gamma*(nc \
+    +1)/2-1j*omega12,0,p*(n1+n2)/2,0,-1j*Te/h,0,0,0,0], [gamma1*(n1+1),0,-Gamma*nv-gamma1*n1,1j*Th/h, \
+    0,0,-1j*Th/h,0,0,Gamma*(nv+1)], [0,p*(n1+n2+2)/2,1j*Th/h,-gamma1*(n1)/2-gamma2*(n2)/2-Gamma*(nv)/2 \
+    -1j*omega34,0,0,0,-1j*Th/h,0,0], [-1j*Te/h,0,0,0,-gamma1*(n1+1)/2-gamma2*(n2+1)/2-gamma*(nc+1)/2+1j*omega21,1j*Te/h, \
+    p*(n1+n2)/2,0,0,0], [0,-1j*Te/h,0,0,1j*Te/h,-gamma2*(n2+1)-gamma*(nc+1),0,gamma2*n2,gamma*nc,0], [0,0, \
+    -1j*Th/h,0,p*(n1+n2+2)/2,0,-gamma1*(n1)/2-gamma2*(n2)/2-Gamma*(nv)/2+1j*omega43,1j*Th/h,0,0], [0,0, \
+    0,-1j*Th/h,0,gamma2*(n2+1),1j*Th/h,-n2*gamma2,0,0], [0,0,0,0,0,gamma*(nc+1),0,0,-gamma*nc-GAMMA,0], \
+    [0,0,Gamma*nv,0,0,0,0,0,GAMMA,-Gamma*(nv+1)]])
+    return(Matriz)
+
+B = np.array([1,0,0,0,0,0,0,0,0,0])
+
+npoints = 50000
+gammaoi = 0.05*g
+gammaof = 5e18*g
+x = np.arange(1, npoints, 1)
+y = (gammaoi*gammaof*(npoints-1))/((gammaof-gammaoi)*(x-1)+gammaoi*(npoints-1))
+
+eficiencia3 = np.array([])
+for tau in taulist:
+    d = 2
+    Te = 0.5*(11.672*np.exp(-d/7.14))  # -0.012 + 13.135*np.exp(-d/7)
+    Th = 0.5*(2.202*np.exp(-d/3.37))  # -0.0012 + 2.384*np.exp(-d/3.25)
+
+    Ts = 500  # meV
+    Ta = Ts*tau  
+
+    n2 = 1 / (np.exp(E24 / (k * Ts)) - 1)  # (k*Ts)/(E24)  # 1/(np.exp(E24/(k*Ts))-1)
+    n1 = 1 / (np.exp(E13 / (k * Ts)) - 1)  # (k*Ts)/(E13)  # 1/(np.exp(E13/(k*Ts))-1)
+    nc = 1 / (np.exp(E2c / (k * Ta)) - 1)  # (k*Ta)/(E2c)  # 1/(np.exp(E2c/(k*Ta))-1)
+    nv = 1 / (np.exp(E3v / (k * Ta)) - 1)  # (k*Ta)/(E3v)  # 1/(np.exp(E3v/(k*Ta))-1)
+
+    VA1 = np.array([])
+    JA1 = np.array([])
+    PA1 = np.array([])
+    PsA1 = np.array([])
+    etaA1 = np.array([])
+    idx = 1
+    for GAMMA in y:
+        solve = np.linalg.solve(M(GAMMA), B)
+        corrente = e * GAMMA * solve[8]
+        v = (Ecv + k * Ta * np.log(solve[8] / solve[9])) / (e / g)
+        p = corrente * v
+        Pss = E13 * corrente
+        eta1 = (p / g) / Pss
+        JA1 = np.append(JA1, corrente / g)
+        PA1 = np.append(PA1, p / (g * g))
+        VA1 = np.append(VA1, v / g)
+        PsA1 = np.append(PsA1, Pss / (g))
+        etaA1 = np.append(etaA1, eta1)
+    P1A1c = PA1.tolist()
+    P1A1n = P1A1c.index(max(PA1))
+    Pmax = max(PA1)
+    Vmax = VA1[P1A1n]
+    etamax = etaA1[P1A1n]
+    etacarnot = 1-tau
+    eficiencia3 = np.append(eficiencia3, etamax)
+
+
+eficiencia4 = np.array([])
+for tau in taulist:
+    d = 10
+    Te = 0.5*(11.672*np.exp(-d/7.14))  # -0.012 + 13.135*np.exp(-d/7)
+    Th = 0.5*(2.202*np.exp(-d/3.37))  # -0.0012 + 2.384*np.exp(-d/3.25)
+
+    Ts = 500  # meV
+    Ta = Ts * tau  # 25.9  # meV
+
+    n2 = 1 / (np.exp(E24 / (k * Ts)) - 1)  # (k*Ts)/(E24)  # 1/(np.exp(E24/(k*Ts))-1)
+    n1 = 1 / (np.exp(E13 / (k * Ts)) - 1)  # (k*Ts)/(E13)  # 1/(np.exp(E13/(k*Ts))-1)
+    nc = 1 / (np.exp(E2c / (k * Ta)) - 1)  # (k*Ta)/(E2c)  # 1/(np.exp(E2c/(k*Ta))-1)
+    nv = 1 / (np.exp(E3v / (k * Ta)) - 1)  # (k*Ta)/(E3v)  # 1/(np.exp(E3v/(k*Ta))-1)
+
+    VA1 = np.array([])
+    JA1 = np.array([])
+    PA1 = np.array([])
+    PsA1 = np.array([])
+    etaA1 = np.array([])
+    idx = 1
+    for GAMMA in y:
+        solve = np.linalg.solve(M(GAMMA), B)
+        corrente = e * GAMMA * solve[8]
+        v = (Ecv + k * Ta * np.log(solve[8] / solve[9])) / (e / g)
+        p = corrente * v
+        Pss = E13 * corrente
+        eta1 = (p / g) / Pss
+        JA1 = np.append(JA1, corrente / g)
+        PA1 = np.append(PA1, p / (g * g))
+        VA1 = np.append(VA1, v / g)
+        PsA1 = np.append(PsA1, Pss / (g))
+        etaA1 = np.append(etaA1, eta1)
+    P1A1c = PA1.tolist()
+    P1A1n = P1A1c.index(max(PA1))
+    Pmax = max(PA1)
+    Vmax = VA1[P1A1n]
+    etamax = etaA1[P1A1n]
+    etacarnot = 1-tau
+    eficiencia4 = np.append(eficiencia4, etamax)
+
+eficiencia5 = np.array([])
+eficienciacarnot5 = np.array([])
+for tau in taulist:
+    eficiencia5 = np.append(eficiencia5, 1-np.sqrt(tau))
+    eficienciacarnot5 = np.append(eficienciacarnot5, 1-tau)
+
+
+plt.plot(taulist, eficienciacarnot5, '-k', label=r'$\eta_{C}$')
+plt.plot(taulist, eficiencia5, 's-r', alpha=0.5, label=r'$\eta_{CN}$')
+plt.plot(taulist, eficiencia3, '^-c', label=r'$\delta = 3$ meV, $d = 2$ nm')
+plt.plot(taulist, eficiencia4, '--m', label=r'$\delta = 3$ meV, $d = 10$ nm')
+plt.ylabel(r'$\eta$')
+plt.xlabel(r'$\tau$')
+plt.legend()
+plt.show()
+
+
